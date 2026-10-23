@@ -5,6 +5,9 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'terraform/**'
+      - 'github/workflows/terraform.yaml'
 
 permissions:
   contents: read
@@ -12,7 +15,7 @@ permissions:
 jobs:
   terraform:
     name: Validate and plan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     permissions:
       contents: read
