@@ -134,11 +134,11 @@ def test_ingest_carbon_intensity():
             "main.fetch_carbon_intensity_raw",
             return_value=data) as mock_fetch, \
          patch(
-            "main.save_carbon_intensity_to_json",
-            return_value="mocked_file_path.json") as mock_save:
+            "main.upload_carbon_intensity_to_s3_bucket",
+            return_value="s3://mock-bucket/carbon-intensity/2024-06-01_00-00-00-000000.json") as mock_save:
         
         result = ingest_carbon_intensity()
-        assert result == "mocked_file_path.json"
+        assert result == "s3://mock-bucket/carbon-intensity/2024-06-01_00-00-00-000000.json"
         mock_fetch.assert_called_once()
         mock_save.assert_called_once()
         mock_save.assert_called_once_with(data)
@@ -151,7 +151,7 @@ def test_ingest_carbon_intensity_fetch_failure():
         "main.fetch_carbon_intensity_raw",
         side_effect=requests.exceptions.RequestException("API unavailable"),
     ) as mock_fetch, patch(
-        "main.save_carbon_intensity_to_json",
+        "main.upload_carbon_intensity_to_s3_bucket",
     ) as mock_save:
 
         with pytest.raises(requests.exceptions.RequestException, match="API unavailable"):
