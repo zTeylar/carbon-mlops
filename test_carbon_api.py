@@ -1,8 +1,11 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+import json
+from unittest.mock import patch
 import pytest
 import requests
 import responses
-from main import get_carbon_intensity, extract_carbon_intensity
+
+from main import extract_carbon_intensity, get_carbon_intensity, save_carbon_intensity_to_json, ingest_carbon_intensity
 
 
 @responses.activate
@@ -29,8 +32,8 @@ def test_carbon_intensity_api():
 
     data = get_carbon_intensity()
 
-    assert data["from"] == datetime(2024, 6, 1, 0, 0, tzinfo=timezone.utc)
-    assert data["to"] == datetime(2024, 6, 1, 0, 30, tzinfo=timezone.utc)
+    assert data["from"] == datetime(2024, 6, 1, 0, 0, tzinfo=UTC)
+    assert data["to"] == datetime(2024, 6, 1, 0, 30, tzinfo=UTC)
     assert data["forecast"] == 180
     assert data["actual"] == 130
     assert data["index"] == "moderate"
@@ -93,3 +96,66 @@ def test_carbon_intensity_api_timeout():
 def test_carbon_intensity_api_empty_response():
     with pytest.raises(ValueError):
         extract_carbon_intensity({"data": []})
+
+
+def test_save_carbon_intensity_to_json(tmp_path):
+    data = {
+        "from": "2024-06-01T00:00:00Z",
+        "to": "2024-06-01T00:30:00Z",
+        "forecast": 180,
+        "actual": 130,
+        "index": "moderate"
+    }
+
+    filename = save_carbon_intensity_to_json(data, output_dir=tmp_path)
+
+    assert filename.exists()
+
+    with open(filename, "r", encoding="utf-8") as f:
+        loaded_data = json.load(f)
+    print(loaded_data)
+    assert loaded_data == data
+
+
+def test_ingest_carbon_intensity():
+    data = {
+            "data":[ {
+                "from": "2024-06-01T00:00Z",
+                "to": "2024-06-01T00:30Z",
+                "intensity": {
+                    "forecast": 180,
+                    "actual": 130,
+                    "index": "moderate"
+                }
+            }]
+        }
+
+    with patch(
+            "main.fetch_carbon_intensity_raw",
+            return_value=data) as mock_fetch, \
+         patch(
+            "main.save_carbon_intensity_to_json",
+            return_value="mocked_file_path.json") as mock_save:
+        
+        result = ingest_carbon_intensity()
+        assert result == "mocked_file_path.json"
+        mock_fetch.assert_called_once()
+        mock_save.assert_called_once()
+        mock_save.assert_called_once_with(data)
+
+
+
+
+def test_ingest_carbon_intensity_fetch_failure():
+    with patch(
+        "main.fetch_carbon_intensity_raw",
+        side_effect=requests.exceptions.RequestException("API unavailable"),
+    ) as mock_fetch, patch(
+        "main.save_carbon_intensity_to_json",
+    ) as mock_save:
+
+        with pytest.raises(requests.exceptions.RequestException, match="API unavailable"):
+            ingest_carbon_intensity()
+
+        mock_fetch.assert_called_once()
+        mock_save.assert_not_called()
