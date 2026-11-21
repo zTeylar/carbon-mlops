@@ -2,9 +2,12 @@ from datetime import UTC, datetime
 import json
 import os
 from pathlib import Path
-
+import logging
 import requests
 import boto3
+
+
+logger = logging.getLogger(__name__)
 
 
 def fetch_carbon_intensity_raw():
@@ -12,6 +15,7 @@ def fetch_carbon_intensity_raw():
     response = requests.get(url, timeout=10)
     response.raise_for_status()
     data = response.json()
+    logger.info("Fetched carbon intensity data from API.")
     return data
 
 
@@ -85,7 +89,7 @@ def upload_carbon_intensity_to_s3_bucket(data, bucket_name=None, s3_client=None)
         Body=body,
         ContentType="application/json"
     )
-
+    logger.info("Uploaded carbon intensity data to S3: s3://%s/%s", bucket_name, key)
     return f"s3://{bucket_name}/{key}"
 
 
