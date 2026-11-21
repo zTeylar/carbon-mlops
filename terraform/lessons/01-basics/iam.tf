@@ -68,24 +68,3 @@ resource "aws_iam_role_policy" "scheduler_execution_policy" {
     ]
   })
 }
-
-
-moved {
-  from = aws_iam_role.lambda_execution_replacement
-  to   = aws_iam_role.lambda_execution
-}
-
-moved {
-  from = aws_iam_policy.lambda_upload_policy_replacement
-  to   = aws_iam_policy.lambda_upload_policy
-}
-
-moved {
-  from = aws_iam_role_policy_attachment.lambda_upload_policy_replacement_attachment
-  to   = aws_iam_role_policy_attachment.lambda_upload_policy_attachment
-}
-
-moved {
-  from = aws_iam_role_policy_attachment.lambda_basic_execution_replacement
-  to   = aws_iam_role_policy_attachment.lambda_basic_execution
-}
