@@ -15,9 +15,9 @@ resource "aws_s3_bucket" "raw_data" {
   bucket_prefix = "carbon-mlops-raw-"
 
   tags = {
-    Project      = "carbon-mlops"
-    Envirnonment = "dev"
-    ManagedBy    = "terraform"
+    Project     = "carbon-mlops"
+    Environment = "dev"
+    ManagedBy   = "terraform"
   }
 }
 

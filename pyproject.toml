@@ -1,15 +1,18 @@
 [project]
 name = "carbon-mlops"
 version = "0.1.0"
-description = "Add your description here"
+description = "Carbon intensity data ingestion pipeline"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "boto3>=1.43.121",
-    "datetime>=6.0",
+    "requests>=2.34.2",
+]
+
+[dependency-groups]
+dev = [
     "mypy>=2.4.0",
     "pytest>=9.1.1",
-    "requests>=2.34.2",
     "responses>=0.26.3",
     "ruff>=0.16.10",
 ]
