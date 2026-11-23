@@ -50,6 +50,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
 
       - name: Build Lambda package
+        working-directory: .
         run: |
           mkdir -p build/lambda
 
