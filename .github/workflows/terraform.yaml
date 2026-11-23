@@ -16,12 +16,40 @@ on:
       - 'terraform/**'
       - '.github/workflows/terraform.yaml'
 
-permissions:
-  contents: read
-
 jobs:
-  terraform:
+  terraform-pr:
     name: Validate and plan
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: read
+
+    defaults:
+      run:
+        working-directory: terraform/lessons/01-basics
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.16.6"
+
+      - name: Check Terraform formatting
+        run: terraform fmt -check
+
+      - name: Initialize Terraform without remote backend
+        run: terraform init -backend=false -input=false
+
+      - name: Validate configuration
+        run: terraform validate
+
+  terraform-main:
+    name: Terraform plan (main)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
 
     permissions:
@@ -40,7 +68,7 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.16.6"
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -65,13 +93,6 @@ jobs:
           cd build/lambda
           zip -r ../carbon-mlops-lambda.zip .
 
-      - name: Inspect GitHub context
-        run: |
-          echo "Repository: $GITHUB_REPOSITORY"
-          echo "Repository owner: $GITHUB_REPOSITORY_OWNER"
-          echo "Ref: $GITHUB_REF"
-          echo "Event: $GITHUB_EVENT_NAME"
-          
       - name: Configure AWS credentials using OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
