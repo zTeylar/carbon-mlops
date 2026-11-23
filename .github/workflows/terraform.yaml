@@ -33,6 +33,29 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.16.6"
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Build Lambda package
+        run: |
+          mkdir -p build/lambda
+
+          uv pip install \
+            --python-platform x86_64-manylinux2014 \
+            --python 3.13 \
+            --target build/lambda \
+            boto3 requests
+
+          cp main.py lambda_function.py build/lambda/
+
+          cd build/lambda
+          zip -r ../carbon-mlops-lambda.zip .
 
       - name: Configure AWS credentials using OIDC
         uses: aws-actions/configure-aws-credentials@v4
