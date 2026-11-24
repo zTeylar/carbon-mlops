@@ -8,6 +8,11 @@ on:
     paths:
       - 'terraform/**'
       - '.github/workflows/terraform.yaml'
+      - 'main.py'
+      - 'lambda_function.py'
+      - 'schemas.py'
+      - 'pyproject.toml'
+      - 'uv.lock'
 
   push:
     branches:
@@ -15,6 +20,11 @@ on:
     paths:
       - 'terraform/**'
       - '.github/workflows/terraform.yaml'
+      - 'main.py'
+      - 'lambda_function.py'
+      - 'schemas.py'
+      - 'pyproject.toml'
+      - 'uv.lock'
 
 jobs:
   terraform-pr:
@@ -51,17 +61,29 @@ jobs:
         run: |
           mkdir -p build/lambda
 
+          uv export \
+            --locked \
+            --no-dev \
+            --no-emit-project \
+            --format requirements-txt \
+            --output-file build/requirements.txt
+
           uv pip install \
             --python-platform x86_64-manylinux2014 \
             --python 3.13 \
             --target build/lambda \
-            boto3 requests
+            -r build/requirements.txt
 
-          cp main.py lambda_function.py build/lambda/
+          cp main.py lambda_function.py schemas.py build/lambda/
 
           cd build/lambda
           zip -r ../carbon-mlops-lambda.zip .
-          
+      
+      - name: Smoke test Lambda package
+        working-directory: build/lambda
+        run: |
+          python -S -c "from lambda_function import lambda_handler; assert callable(lambda_handler)"
+      
       - name: Check Terraform formatting
         run: terraform fmt -check
 
@@ -106,16 +128,28 @@ jobs:
         run: |
           mkdir -p build/lambda
 
+          uv export \
+            --locked \
+            --no-dev \
+            --no-emit-project \
+            --format requirements-txt \
+            --output-file build/requirements.txt
+
           uv pip install \
             --python-platform x86_64-manylinux2014 \
             --python 3.13 \
             --target build/lambda \
-            boto3 requests
+            -r build/requirements.txt
 
-          cp main.py lambda_function.py build/lambda/
+          cp main.py lambda_function.py schemas.py build/lambda/
 
           cd build/lambda
           zip -r ../carbon-mlops-lambda.zip .
+      
+      - name: Smoke test Lambda package
+        working-directory: build/lambda
+        run: |
+          python -S -c "from lambda_function import lambda_handler; assert callable(lambda_handler)"
 
       - name: Configure AWS credentials using OIDC
         uses: aws-actions/configure-aws-credentials@v4

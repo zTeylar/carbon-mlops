@@ -6,27 +6,29 @@ import logging
 import requests
 import boto3
 
+from schemas import CarbonIntensityResponse
+
 
 logger = logging.getLogger(__name__)
 
 
-def fetch_carbon_intensity_raw():
+def fetch_carbon_intensity_raw() -> object:
     url = "https://api.carbonintensity.org.uk/intensity"
     response = requests.get(url, timeout=10)
     response.raise_for_status()
-    data = response.json()
+    raw_payload = response.json()
     logger.info("Fetched carbon intensity data from API.")
-    return data
+    return raw_payload
 
 
-def get_carbon_intensity():
-    data = fetch_carbon_intensity_raw()
-    extracted_data = extract_carbon_intensity(data)
+def get_carbon_intensity() -> dict[str]:
+    raw_payload = fetch_carbon_intensity_raw()
+    extracted_data = extract_carbon_intensity(raw_payload)
     return extracted_data
 
 
-def extract_carbon_intensity(data):
-    records = data.get("data")
+def extract_carbon_intensity(raw_payload):
+    records = raw_payload.get("data")
     if not records:
         raise ValueError("Unexpected API response: 'data' missing or empty")
     record = records[0]
@@ -45,7 +47,7 @@ def extract_carbon_intensity(data):
     }
 
 
-def save_carbon_intensity_to_json(data, output_dir=None):
+def save_carbon_intensity_to_json(data, output_dir=None) -> Path:
     if output_dir is None:
         dir_path = Path(__file__).parent / "data" / "raw"
     else:
@@ -62,14 +64,15 @@ def save_carbon_intensity_to_json(data, output_dir=None):
     return filename
 
 
-def ingest_carbon_intensity():
-    data = fetch_carbon_intensity_raw()
-    #file_path = save_carbon_intensity_to_json(data)
-    s3_URI =upload_carbon_intensity_to_s3_bucket(data)
-    return s3_URI
+def ingest_carbon_intensity() -> str:
+    raw_payload = fetch_carbon_intensity_raw()
+    CarbonIntensityResponse.model_validate(raw_payload)
+    logger.info("Schema validation succeded")
+    s3_uri = upload_carbon_intensity_to_s3_bucket(raw_payload)
+    return s3_uri
 
 
-def upload_carbon_intensity_to_s3_bucket(data, bucket_name=None, s3_client=None):
+def upload_carbon_intensity_to_s3_bucket(raw_payload, bucket_name=None, s3_client=None) -> str:
     if bucket_name is None:
         bucket_name = os.environ.get("CARBON_RAW_BUCKET")
 
@@ -81,7 +84,7 @@ def upload_carbon_intensity_to_s3_bucket(data, bucket_name=None, s3_client=None)
 
     timestamp = datetime.now(UTC).strftime("%Y-%m-%d_%H-%M-%S-%f")
     key = f"carbon-intensity/{timestamp}.json"
-    body = json.dumps(data, indent=4).encode("utf-8")
+    body = json.dumps(raw_payload, indent=4).encode("utf-8")
 
     s3_client.put_object(
         Bucket=bucket_name,
@@ -96,7 +99,7 @@ def upload_carbon_intensity_to_s3_bucket(data, bucket_name=None, s3_client=None)
 
 
 
-def main():
+def main() -> None:
     print(ingest_carbon_intensity())
 
 if __name__ == "__main__":
